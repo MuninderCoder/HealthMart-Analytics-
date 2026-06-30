@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: healthmart_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_uploads:/app/backend/uploads
+    environment:
+      - JWT_SECRET=healthmart_secret_key_2026_super_secure
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: healthmart_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  backend_uploads:

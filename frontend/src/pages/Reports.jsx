@@ -338,80 +338,93 @@ export default function Reports() {
         
         <div className="divide-y divide-slate-100">
           {activeResults ? (
-            <>
-              {/* Report 1: Frequent Itemsets */}
-              <div className="flex items-center justify-between p-5 hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
-                    <Database className="w-4.5 h-4.5 text-emerald-600" />
+            (() => {
+              const user = JSON.parse(localStorage.getItem('hm_user') || '{"role":"viewer"}')
+              const isAnalyst = user.role === 'analyst'
+              
+              return (
+                <>
+                  {/* Report 1: Frequent Itemsets */}
+                  <div className="flex items-center justify-between p-5 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
+                        <Database className="w-4.5 h-4.5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 font-semibold">Frequent Itemsets Table</p>
+                        <p className="text-[10px] text-slate-400">Dataset: {activeDatasetName} · {activeResults.totalFrequentItemsets} patterns</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handlePrintItemsets}
+                        disabled={isAnalyst}
+                        title={isAnalyst ? "PDF generation is restricted to Admin role" : "Generate printable PDF"}
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold rounded-lg transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> PDF/Print
+                      </button>
+                      <button
+                        onClick={exportItemsetsCSV}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" /> CSV
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 font-semibold">Frequent Itemsets Table</p>
-                    <p className="text-[10px] text-slate-400">Dataset: {activeDatasetName} · {activeResults.totalFrequentItemsets} patterns</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handlePrintItemsets}
-                    className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold rounded-lg transition-colors"
-                  >
-                    <Eye className="w-3.5 h-3.5" /> PDF/Print
-                  </button>
-                  <button
-                    onClick={exportItemsetsCSV}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors"
-                  >
-                    <Download className="w-3.5 h-3.5" /> CSV
-                  </button>
-                </div>
-              </div>
 
-              {/* Report 2: Association Rules */}
-              <div className="flex items-center justify-between p-5 hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center">
-                    <Award className="w-4.5 h-4.5 text-violet-600" />
+                  {/* Report 2: Association Rules */}
+                  <div className="flex items-center justify-between p-5 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center">
+                        <Award className="w-4.5 h-4.5 text-violet-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 font-semibold">Association Rules Table</p>
+                        <p className="text-[10px] text-slate-400">Dataset: {activeDatasetName} · {activeResults.totalRules} rules</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handlePrintRules}
+                        disabled={isAnalyst}
+                        title={isAnalyst ? "PDF generation is restricted to Admin role" : "Generate printable PDF"}
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold rounded-lg transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> PDF/Print
+                      </button>
+                      <button
+                        onClick={exportRulesCSV}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-lg transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" /> CSV
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 font-semibold">Association Rules Table</p>
-                    <p className="text-[10px] text-slate-400">Dataset: {activeDatasetName} · {activeResults.totalRules} rules</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handlePrintRules}
-                    className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold rounded-lg transition-colors"
-                  >
-                    <Eye className="w-3.5 h-3.5" /> PDF/Print
-                  </button>
-                  <button
-                    onClick={exportRulesCSV}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-lg transition-colors"
-                  >
-                    <Download className="w-3.5 h-3.5" /> CSV
-                  </button>
-                </div>
-              </div>
 
-              {/* Report 3: Print/PDF Summary */}
-              <div className="flex items-center justify-between p-5 hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
-                    <FileText className="w-4.5 h-4.5 text-blue-600" />
+                  {/* Report 3: Print/PDF Summary */}
+                  <div className="flex items-center justify-between p-5 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
+                        <FileText className="w-4.5 h-4.5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 font-semibold">Comprehensive Analytics Report</p>
+                        <p className="text-[10px] text-slate-400">Generate executive PDF compilation of support curves and PPC diagnostics</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handlePrintExecutive}
+                      disabled={isAnalyst}
+                      title={isAnalyst ? "PDF generation is restricted to Admin role" : "Generate printable PDF"}
+                      className="flex items-center gap-1.5 px-4.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> Generate PDF Report
+                    </button>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 font-semibold">Comprehensive Analytics Report</p>
-                    <p className="text-[10px] text-slate-400">Generate executive PDF compilation of support curves and PPC diagnostics</p>
-                  </div>
-                </div>
-                <button
-                  onClick={handlePrintExecutive}
-                  className="flex items-center gap-1.5 px-4.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors"
-                >
-                  <Eye className="w-3.5 h-3.5" /> Generate PDF Report
-                </button>
-              </div>
-            </>
+                </>
+              )
+            })()
           ) : (
             <div className="p-8 flex flex-col items-center justify-center text-center gap-3">
               <AlertCircle className="w-8 h-8 text-slate-400" />

@@ -1,6 +1,9 @@
 import axios from 'axios'
 
-const BASE_URL = 'http://127.0.0.1:8000'
+const BASE_URL = typeof window !== 'undefined' && 
+  (window.location.port === '5173' || window.location.port === '5174')
+    ? 'http://127.0.0.1:8000'
+    : window.location.origin
 
 // Root-level client (for /health connectivity check)
 const rootClient = axios.create({
@@ -12,6 +15,17 @@ const rootClient = axios.create({
 const apiClient = axios.create({
   baseURL: `${BASE_URL}/api`,
   timeout: 30000, // 30 seconds for larger file parsing
+})
+
+// Attach Bearer Token to all api calls automatically
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('hm_token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+}, (error) => {
+  return Promise.reject(error)
 })
 
 // Configure retry interceptor for transient errors
@@ -89,6 +103,38 @@ export const api = {
       minimumSupport,
       minimumConfidence,
     })
+    return res.data
+  },
+
+  // Auth login
+  login: async (username, password) => {
+    const res = await apiClient.post('/auth/login', { username, password })
+    if (res.data && res.data.access_token) {
+      localStorage.setItem('hm_token', res.data.access_token)
+      localStorage.setItem('hm_user', JSON.stringify({
+        username: res.data.username,
+        role: res.data.role
+      }))
+    }
+    return res.data
+  },
+
+  // Auth signup
+  signup: async (username, password, role) => {
+    const res = await apiClient.post('/auth/signup', { username, password, role })
+    return res.data
+  },
+
+  // Auth logout
+  logout: () => {
+    localStorage.removeItem('hm_token')
+    localStorage.removeItem('hm_user')
+    window.location.href = '/login'
+  },
+
+  // Admin users list
+  getUsers: async () => {
+    const res = await apiClient.get('/users')
     return res.data
   },
 }

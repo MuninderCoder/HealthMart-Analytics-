@@ -3,12 +3,17 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api.endpoints import router as api_router
+from backend.app.services.user_service import UserService
 
 app = FastAPI(
     title="HealthMart Analytics API",
     description="Backend services for parsing and diagnosing healthcare datasets, ready for DiffNodeset pattern mining.",
     version="1.0.0"
 )
+
+@app.on_event("startup")
+def startup_event():
+    UserService.initialize()
 
 # CORS Configuration
 origins = [

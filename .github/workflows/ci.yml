@@ -1,0 +1,56 @@
+name: HealthMart Analytics CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # ─── 1. C++ Compiler Setup & Testing ─────────────────────────────────────
+    - name: Install C++ compiler (g++)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential
+
+    - name: Compile C++ Mining Engine & Test Runner
+      run: |
+        make -C backend/algorithm/cpp all
+
+    - name: Run C++ Unit Tests
+      run: |
+        ./backend/algorithm/cpp/run_tests
+
+    # ─── 2. Python Environment & API Testing ─────────────────────────────────
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r backend/requirements.txt pytest httpx
+
+    # ─── 3. Node.js Environment & Frontend Build ─────────────────────────────
+    - name: Set up Node.js 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install Frontend dependencies
+      run: |
+        npm ci --prefix frontend
+
+    - name: Compile Frontend Production Assets
+      run: |
+        npm run build --prefix frontend

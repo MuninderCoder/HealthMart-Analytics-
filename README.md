@@ -113,19 +113,12 @@ HealthMart-Analytics/
 └── frontend/
     ├── public/
     ├── src/
-    │   ├── assets/
-    │   ├── components/
-    │   │   └── dataset/
-    │   │       └── MiningDashboard.jsx
-    │   ├── data/
-    │   ├── layouts/
-    │   ├── pages/
-    │   │   └── DatasetManager.jsx
-    │   └── utils/
-    │       └── api.js
-    ├── index.html
-    ├── package.json
-    └── vite.config.js
+    ├── assets/
+    ├── components/
+    ├── data/
+    ├── layouts/
+    ├── pages/
+    └── utils/
 ```
 
 ---
@@ -135,33 +128,64 @@ HealthMart-Analytics/
 ### Prerequisites
 Make sure you have Node.js (v18+), Python (v3.10+), and a C++ compiler (v14+ compatible, e.g. g++) installed.
 
-### 1. Compile the C++ Mining Engine
+### Local Development Setup
+
+1. **Compile the C++ Mining Engine**:
+   - Windows (MinGW):
+     ```bash
+     mingw32-make -C backend/algorithm/cpp all
+     ```
+   - Linux/macOS:
+     ```bash
+     make -C backend/algorithm/cpp all
+     ```
+
+2. **Install Backend Dependencies**:
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
+
+3. **Install Frontend Dependencies**:
+   ```bash
+   npm install --prefix frontend
+   ```
+
+4. **Start Backend Server**:
+   ```bash
+   python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
+   ```
+   *Swagger API Docs are available at: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)*
+
+5. **Start Frontend Server**:
+   ```bash
+   npm run dev --prefix frontend
+   ```
+   *Client dashboard available at: [http://localhost:5174/](http://localhost:5174/)*
+
+---
+
+## 🐳 Docker Deployment (One-Command Run)
+
+To run the entire HealthMart Analytics platform including reverse proxy and volumes with a single command:
+
 ```bash
-mingw32-make -C backend/algorithm/cpp all
+docker-compose up --build
 ```
 
-### 2. Install Frontend Dependencies
-```bash
-npm install
-```
+- **Frontend client portal**: [http://localhost/](http://localhost/)
+- **Backend Swagger APIs**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-### 3. Install Backend Dependencies
-```bash
-pip install -r backend/requirements.txt
-```
+---
 
-### 4. Run Backend Server
-```bash
-# Start backend on http://127.0.0.1:8000
-python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
-```
-*Swagger API Docs are available at: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)*
+## 🔑 Default Seed Accounts
 
-### 5. Run Frontend Server
-```bash
-# Start React frontend on http://localhost:5173
-npm run dev
-```
+The platform automatically registers the following seed accounts upon backend server initialization:
+
+| Username | Password | Role | Permissions |
+|---|---|---|---|
+| **admin** | `AdminPassword123!` | `admin` | Full system access, dataset uploads, mining, PDF reporting, user creation |
+| **analyst** | `AnalystPassword123!` | `analyst` | Dataset uploads, mining runs, view analytics, export CSVs |
+| **viewer** | `ViewerPassword123!` | `viewer` | Read-only access to Dashboards and Analytics charts |
 
 ---
 
@@ -187,36 +211,39 @@ graph TD
 
 ## 🔌 API Documentation
 
-### 1. Health Status Check
-* **Endpoint**: `GET /health`
-* **Description**: System status check, returns the current status of the backend and C++ engine capability.
+### 1. JWT Login Verification
+* **Endpoint**: `POST /api/auth/login`
+* **Request**:
+  ```json
+  {
+    "username": "admin",
+    "password": "AdminPassword123!"
+  }
+  ```
 * **Response**:
   ```json
   {
-    "status": "healthy",
-    "service": "HealthMart Analytics Backend",
-    "engine": "Ready for DiffNodeset"
+    "access_token": "header.payload.signature",
+    "token_type": "bearer",
+    "username": "admin",
+    "role": "admin"
   }
   ```
 
-### 2. Dataset Upload
-* **Endpoint**: `POST /api/upload`
-* **Description**: Accepts a CSV or Excel file, parses it using Pandas, extracts metadata, validates quality, generates structured transactional items, and stores it in backend uploads.
-* **Response**:
+### 2. User Sign Up
+* **Endpoint**: `POST /api/auth/signup`
+* **Request**:
   ```json
   {
-    "id": "dataset-uuid-here",
-    "filename": "patient_records.csv",
-    "fileType": "CSV",
-    "fileSize": "14.2 KB",
-    "rows": 15,
-    "columns": 9
+    "username": "analyst_demo",
+    "password": "SecurePassword123!",
+    "role": "analyst"
   }
   ```
 
-### 3. Run Pattern Mining
+### 3. Running Data Mining (Auth Required)
 * **Endpoint**: `POST /api/mine`
-* **Description**: Coordinates C++ execution by passing the target dataset ID and mining thresholds. Returns mined itemsets, association rules, and diagnostics.
+* **Headers**: `Authorization: Bearer <token>`
 * **Request**:
   ```json
   {
@@ -250,24 +277,17 @@ Thanks to the compiled C++14 engine and the DiffNodeset representation, the plat
 
 ---
 
-## 📸 Screenshots Placeholder
-* (Landing Page showing interactive sidebar layout and theme)
-* (Dataset Manager displaying Health Score, Diagnostics table, and Readiness Panel)
-* (Mining Dashboard with Recharts distributions and CSV export tables)
-
----
-
 ## ⚠️ Known Limitations
 * **RAM constraints on extremely low-support joins**: Setting support to `< 1%` on datasets with high cardinality ($>10,000$ unique items) might lead to high virtual memory usage due to combinatorial expansion.
 * **Numeric Binning**: Floating-point numeric columns are not automatically binned into categories; they are treated as unique categorical strings.
 
 ---
 
-## 🔮 Upcoming Phase: AI Insights & LLM Integration (Phase 7)
-* **Natural Language Summaries**: Automatically explain co-prescription combinations and symptoms.
-* **Automated Clinical Recommendations**: Suggest department routing and medication double-checks using generative clinical agents.
+## 📄 License & Contributing
+This project is licensed under the **MIT License**. For developer contribution conventions, please see [CONTRIBUTING.md](file:///C:/Users/VIRENDER%20MEENA/Desktop/HealthMart%20Analytics/CONTRIBUTING.md).
 
 ---
 
-## 📄 License
-This project is licensed under the MIT License.
+## 🔮 Upcoming Phase: AI Insights & LLM Integration (Phase 7)
+- **Natural Language Summaries**: Automatically explain co-prescription combinations and symptoms.
+- **Automated Clinical Recommendations**: Suggest department routing and medication double-checks using generative clinical agents.
