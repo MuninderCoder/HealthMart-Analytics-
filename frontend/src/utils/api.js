@@ -14,6 +14,30 @@ const apiClient = axios.create({
   timeout: 30000, // 30 seconds for larger file parsing
 })
 
+// Configure retry interceptor for transient errors
+apiClient.interceptors.response.use(undefined, async (err) => {
+  const { config } = err
+  // Retry only GET requests with retry config
+  if (!config || !config.retry || config.method !== 'get') {
+    return Promise.reject(err)
+  }
+  
+  config.__retryCount = config.__retryCount || 0
+  if (config.__retryCount >= config.retry) {
+    return Promise.reject(err)
+  }
+  
+  config.__retryCount += 1
+  const delay = config.retryDelay || 1000
+  await new Promise((resolve) => setTimeout(resolve, delay * config.__retryCount))
+  return apiClient(config)
+})
+
+// Set defaults
+apiClient.defaults.retry = 3
+apiClient.defaults.retryDelay = 1000
+
+
 export const api = {
   // GET root-level health check — used for backend status indicator
   checkHealth: async () => {

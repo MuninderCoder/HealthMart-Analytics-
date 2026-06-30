@@ -108,8 +108,14 @@ export default function DatasetManager() {
   // ── Session history ─────────────────────────────────────────────────────────
   const [history, setHistory] = useState([])
 
-  // ── Load history on mount ──────────────────────────────────────────────────
+  // ── Load settings & history on mount ──────────────────────────────────────────
   useEffect(() => {
+    // Load saved settings
+    const savedSupport = localStorage.getItem('hm_min_support')
+    const savedConfidence = localStorage.getItem('hm_min_confidence')
+    if (savedSupport) setMinSupportPct(parseFloat(savedSupport))
+    if (savedConfidence) setMinConfidence(parseFloat(savedConfidence))
+
     const fetchHistory = async () => {
       try {
         const datasets = await api.getDatasets()
@@ -120,6 +126,55 @@ export default function DatasetManager() {
     }
     fetchHistory()
   }, [toast])
+
+  // ── Load active dataset on mount ────────────────────────────────────────────
+  useEffect(() => {
+    const savedActiveId = localStorage.getItem('hm_active_dataset_id')
+    const savedActiveName = localStorage.getItem('hm_active_dataset_filename')
+    const savedMining = localStorage.getItem('hm_mining_results')
+
+    if (savedActiveId && savedActiveName) {
+      setFile({ name: savedActiveName, size: 0 })
+      setStatus('parsing')
+      setProgress(50)
+
+      api.getDataset(savedActiveId)
+        .then((fullDetails) => {
+          setSelectedDatasetId(savedActiveId)
+          setRawData(fullDetails.previewData || [])
+          setColumns(fullDetails.colAnalysis.map(c => c.col))
+          setSummary({
+            records: fullDetails.rows,
+            columns: fullDetails.columns,
+            fileSize: fullDetails.fileSize,
+            fileType: fullDetails.fileType,
+          })
+          setUploadTime(fullDetails.uploadTime)
+          setColAnalysis(fullDetails.colAnalysis || [])
+          setHealth(fullDetails.health || null)
+          setQualityChecks(fullDetails.qualityChecks || [])
+          setSuggestions(fullDetails.suggestions || [])
+          setTransactions(fullDetails.transactions || null)
+          setAnalytics(fullDetails.analytics || null)
+
+          if (savedMining) {
+            try {
+              setMiningResults(JSON.parse(savedMining))
+            } catch (_) {}
+          }
+
+          setStatus('ready')
+          setProgress(100)
+        })
+        .catch(() => {
+          localStorage.removeItem('hm_active_dataset_id')
+          localStorage.removeItem('hm_active_dataset_filename')
+          localStorage.removeItem('hm_mining_results')
+          setStatus('idle')
+          setProgress(0)
+        })
+    }
+  }, [])
 
   // ── File select & Upload handler ────────────────────────────────────────────
   const handleFileSelect = useCallback(async (selectedFile) => {
@@ -277,6 +332,12 @@ export default function DatasetManager() {
     try {
       toast.show('info', 'Initializing C++ DiffNodeset mining engine...')
       const res = await api.mineDataset(selectedDatasetId, minSupportPct, minConfidence)
+      
+      // Save details to localStorage
+      localStorage.setItem('hm_active_dataset_id', selectedDatasetId)
+      localStorage.setItem('hm_active_dataset_filename', file?.name || 'dataset.csv')
+      localStorage.setItem('hm_mining_results', JSON.stringify(res))
+
       setMiningResults(res)
       toast.show('success', `✓ Pattern mining complete! Mined ${res.totalFrequentItemsets.toLocaleString()} itemsets and ${res.totalRules.toLocaleString()} rules in ${res.executionTime}.`)
       
@@ -291,7 +352,7 @@ export default function DatasetManager() {
     } finally {
       setMiningLoading(false)
     }
-  }, [selectedDatasetId, minSupportPct, minConfidence, toast])
+  }, [selectedDatasetId, minSupportPct, minConfidence, file, toast])
 
   const isReady = status === 'ready'
 
