@@ -1,0 +1,16 @@
+PatientID,Age,Gender,Department,Symptoms,Diagnosis,Medicines,VisitDate,Doctor
+P001,45,Male,Cardiology,Chest Pain;Shortness of Breath,Hypertension,Lisinopril;Aspirin,2025-06-01,Dr. Emily Carter
+P002,32,Female,Endocrinology,Fatigue;Weight Gain,Hypothyroidism,Levothyroxine,2025-06-02,Dr. Alan Grant
+P003,58,Female,Endocrinology,Increased Thirst;Frequent Urination,Diabetes Type 2,Metformin,2025-06-02,Dr. Alan Grant
+P004,24,Male,General Medicine,Fever;Cough;Runny Nose,Common Cold,Paracetamol;Vitamin C,2025-06-03,Dr. Sarah Jenkins
+P005,67,Male,Pulmonology,Wheezing;Chronic Cough,Asthma,Albuterol Inhaler,2025-06-04,Dr. Robert Chen
+P006,51,Female,Cardiology,Chest Pain;Palpitations,Hypertension,Amlodipine;Aspirin,2025-06-04,Dr. Emily Carter
+P007,43,Male,Endocrinology,Fatigue;Increased Thirst,Diabetes Type 2,Metformin;Glipizide,2025-06-05,Dr. Alan Grant
+P008,19,Female,General Medicine,Fever;Sore Throat,Strep Throat,Amoxicillin;Paracetamol,2025-06-05,Dr. Sarah Jenkins
+P009,73,Male,Pulmonology,Shortness of Breath;Cough,COPD,Tiotropium;Prednisone,2025-06-06,Dr. Robert Chen
+P010,38,Female,Cardiology,Dizziness;Mild Chest Pain,Arrhythmia,Metoprolol,2025-06-07,Dr. Emily Carter
+P011,29,Male,General Medicine,Headache;Fever,Flu,Ibuprofen;Rest,2025-06-07,Dr. Sarah Jenkins
+P012,62,Female,Endocrinology,Weight Loss;Jitteriness,Hyperthyroidism,Methimazole,2025-06-08,Dr. Alan Grant
+P013,47,Male,Cardiology,High Blood Pressure,Hypertension,Lisinopril,2025-06-09,Dr. Emily Carter
+P014,35,Female,General Medicine,Cough;Fever;Body Aches,Flu,Oseltamivir;Paracetamol,2025-06-09,Dr. Sarah Jenkins
+P015,55,Male,Pulmonology,Shortness of Breath;Wheezing,Asthma,Fluticasone;Albuterol,2025-06-10,Dr. Robert Chen

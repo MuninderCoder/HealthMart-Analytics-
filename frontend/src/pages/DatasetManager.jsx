@@ -1,7 +1,5 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import Papa from 'papaparse'
-import * as XLSX from 'xlsx'
 import {
   Upload, Eye, BarChart2, History, Cpu,
   ChevronRight, Info, Columns, AlertTriangle, Lightbulb,
@@ -24,15 +22,8 @@ import TransactionPreview  from '../components/dataset/TransactionPreview'
 import ReadinessCard       from '../components/dataset/ReadinessCard'
 import AnalyticsOverview   from '../components/dataset/AnalyticsOverview'
 
-import {
-  summarizeDataset,
-  analyzeColumnsFull,
-  computeHealthScore,
-  generateQualityChecks,
-  generateCleaningSuggestions,
-  generateTransactions,
-  computeAnalyticsOverview
-} from '../utils/datasetUtils'
+// API client utility
+import { api } from '../utils/api'
 
 // ─── Toast hook ──────────────────────────────────────────────────────────────
 function useToast() {
@@ -108,84 +99,20 @@ export default function DatasetManager() {
   // ── Session history ─────────────────────────────────────────────────────────
   const [history, setHistory] = useState([])
 
-  // Progress interval ref
-  const progressTimer = useRef(null)
+  // ── Load history on mount ──────────────────────────────────────────────────
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const datasets = await api.getDatasets()
+        setHistory(datasets)
+      } catch (err) {
+        toast.show('error', 'Failed to retrieve upload history from server.')
+      }
+    }
+    fetchHistory()
+  }, [toast])
 
-  // ── Progress animation ──────────────────────────────────────────────────────
-  const startProgressRamp = useCallback(() => {
-    setProgress(0)
-    let p = 0
-    clearInterval(progressTimer.current)
-    progressTimer.current = setInterval(() => {
-      p += Math.random() * 18
-      if (p >= 88) { p = 88; clearInterval(progressTimer.current) }
-      setProgress(Math.floor(p))
-    }, 120)
-  }, [])
-
-  const finishProgress = useCallback(() => {
-    clearInterval(progressTimer.current)
-    setProgress(100)
-  }, [])
-
-  // ── Process parsed data ─────────────────────────────────────────────────────
-  const processData = useCallback((data, cols, uploadedFile) => {
-    const sum = summarizeDataset(data, cols, uploadedFile)
-    const now = new Date().toISOString()
-
-    // Phase 2B calculations
-    const analysis = analyzeColumnsFull(data, cols)
-    const hlth = computeHealthScore(data, analysis)
-    const qChecks = generateQualityChecks(data, cols, analysis)
-    const suggs = generateCleaningSuggestions(analysis, qChecks)
-    const tx = generateTransactions(data, analysis)
-    const anly = computeAnalyticsOverview(data, analysis)
-
-    finishProgress()
-    setTimeout(() => {
-      setRawData(data)
-      setColumns(cols)
-      setSummary(sum)
-      setUploadTime(now)
-
-      // Set Phase 2B states
-      setColAnalysis(analysis)
-      setHealth(hlth)
-      setQualityChecks(qChecks)
-      setSuggestions(suggs)
-      setTransactions(tx)
-      setAnalytics(anly)
-
-      setStatus('ready')
-
-      setHistory((prev) => [
-        {
-          id: Date.now(),
-          filename: uploadedFile.name,
-          rows: data.length,
-          columns: cols.length,
-          uploadTime: now,
-          fileSize: sum.fileSize,
-          fileType: sum.fileType,
-          status: 'ready',
-          // Store preview data for View functionality (capped at 500 rows)
-          previewData: data.slice(0, 500),
-          previewColumns: cols,
-          colAnalysis: analysis,
-          health: hlth,
-          qualityChecks: qChecks,
-          suggestions: suggs,
-          transactions: tx,
-          analytics: anly,
-        },
-        ...prev.slice(0, 9),
-      ])
-
-      toast.show('success', `✓ "${uploadedFile.name}" parsed — ${data.length.toLocaleString()} rows, ${cols.length} columns.`)
-    }, 350) // let progress bar reach 100% visually first
-  }, [finishProgress, toast])
-
-  // ── File select handler ─────────────────────────────────────────────────────
+  // ── File select & Upload handler ────────────────────────────────────────────
   const handleFileSelect = useCallback(async (selectedFile) => {
     if (!selectedFile) {
       setFile(null)
@@ -195,7 +122,6 @@ export default function DatasetManager() {
       setSummary(null)
       setUploadTime(null)
       setProgress(0)
-      clearInterval(progressTimer.current)
 
       // Reset Phase 2B states
       setColAnalysis([])
@@ -210,100 +136,112 @@ export default function DatasetManager() {
     setFile(selectedFile)
     setStatus('parsing')
     setErrorMsg('')
-    startProgressRamp()
-
-    const ext = selectedFile.name.split('.').pop().toLowerCase()
+    setProgress(0)
 
     try {
-      if (ext === 'csv') {
-        Papa.parse(selectedFile, {
-          header: true,
-          skipEmptyLines: true,
-          dynamicTyping: false,
-          complete: (results) => {
-            if (!results.data || results.data.length === 0) {
-              clearInterval(progressTimer.current)
-              setProgress(0)
-              setStatus('error')
-              setErrorMsg('The CSV file appears to be empty or has no valid rows.')
-              toast.show('error', 'CSV file is empty or has no valid rows.')
-              return
-            }
-            const cols = results.meta.fields || []
-            processData(results.data, cols, selectedFile)
-          },
-          error: (err) => {
-            clearInterval(progressTimer.current)
-            setProgress(0)
-            setStatus('error')
-            const msg = err.message || 'Failed to parse CSV.'
-            setErrorMsg(msg)
-            toast.show('error', `CSV parse error: ${msg}`)
-          },
-        })
-      } else if (ext === 'xlsx' || ext === 'xls') {
-        const buffer = await selectedFile.arrayBuffer()
-        const wb = XLSX.read(buffer, { type: 'array' })
-        const ws = wb.Sheets[wb.SheetNames[0]]
-        const data = XLSX.utils.sheet_to_json(ws, { defval: '' })
-        if (!data || data.length === 0) {
-          clearInterval(progressTimer.current)
-          setProgress(0)
-          setStatus('error')
-          setErrorMsg('The Excel file appears to be empty or has data in the first sheet.')
-          toast.show('error', 'Excel file is empty or has data.')
-          return
-        }
-        const cols = data.length > 0 ? Object.keys(data[0]) : []
-        processData(data, cols, selectedFile)
-      } else {
-        clearInterval(progressTimer.current)
-        setProgress(0)
-        setStatus('error')
-        setErrorMsg(`Unsupported file type ".${ext}". Please upload a CSV or Excel file.`)
-        toast.show('error', `Unsupported file type ".${ext}". Use CSV or .xlsx only.`)
-      }
+      // 1. Post upload to backend
+      const uploadRes = await api.uploadDataset(selectedFile, (percent) => {
+        setProgress(percent)
+      })
+
+      // 2. Fetch full parsed details immediately
+      const fullDetails = await api.getDataset(uploadRes.id)
+
+      // 3. Update React states
+      setRawData(fullDetails.previewData || [])
+      setColumns(fullDetails.colAnalysis.map(c => c.col))
+      setSummary({
+        records: fullDetails.rows,
+        columns: fullDetails.columns,
+        fileSize: fullDetails.fileSize,
+        fileType: fullDetails.fileType,
+      })
+      setUploadTime(fullDetails.uploadTime)
+
+      setColAnalysis(fullDetails.colAnalysis || [])
+      setHealth(fullDetails.health || null)
+      setQualityChecks(fullDetails.qualityChecks || [])
+      setSuggestions(fullDetails.suggestions || [])
+      setTransactions(fullDetails.transactions || null)
+      setAnalytics(fullDetails.analytics || null)
+
+      setStatus('ready')
+
+      // Refresh upload history listing
+      const updatedHistory = await api.getDatasets()
+      setHistory(updatedHistory)
+
+      toast.show('success', `✓ "${selectedFile.name}" successfully parsed — ${fullDetails.rows.toLocaleString()} rows detected.`)
     } catch (err) {
-      clearInterval(progressTimer.current)
       setProgress(0)
       setStatus('error')
-      const msg = err.message || 'Unexpected error while reading file.'
+      const msg = err.response?.data?.detail || err.message || 'Failed to upload or parse file.'
       setErrorMsg(msg)
       toast.show('error', msg)
     }
-  }, [startProgressRamp, processData, toast])
+  }, [toast])
 
   // ── View a history item ─────────────────────────────────────────────────────
-  const handleViewHistory = useCallback((item) => {
-    setRawData(item.previewData)
-    setColumns(item.previewColumns)
-    setSummary({
-      records: item.rows,
-      columns: item.columns,
-      fileSize: item.fileSize,
-      fileType: item.fileType,
-    })
-    setUploadTime(item.uploadTime)
-    setFile({ name: item.filename, size: 0 })
+  const handleViewHistory = useCallback(async (item) => {
+    setStatus('parsing')
+    setProgress(30)
+    try {
+      const fullDetails = await api.getDataset(item.id)
+      setProgress(100)
 
-    // Restore Phase 2B states from history item
-    setColAnalysis(item.colAnalysis || [])
-    setHealth(item.health || null)
-    setQualityChecks(item.qualityChecks || [])
-    setSuggestions(item.suggestions || [])
-    setTransactions(item.transactions || null)
-    setAnalytics(item.analytics || null)
+      setRawData(fullDetails.previewData || [])
+      setColumns(fullDetails.colAnalysis.map(c => c.col))
+      setSummary({
+        records: fullDetails.rows,
+        columns: fullDetails.columns,
+        fileSize: fullDetails.fileSize,
+        fileType: fullDetails.fileType,
+      })
+      setUploadTime(fullDetails.uploadTime)
+      setFile({ name: fullDetails.filename, size: 0 })
 
-    setStatus('ready')
-    setProgress(100)
-    toast.show('info', `Viewing "${item.filename}" from history.`)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+      setColAnalysis(fullDetails.colAnalysis || [])
+      setHealth(fullDetails.health || null)
+      setQualityChecks(fullDetails.qualityChecks || [])
+      setSuggestions(fullDetails.suggestions || [])
+      setTransactions(fullDetails.transactions || null)
+      setAnalytics(fullDetails.analytics || null)
+
+      setStatus('ready')
+      toast.show('info', `Viewing "${item.filename}" from storage.`)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch (err) {
+      setStatus('error')
+      const msg = err.response?.data?.detail || err.message || 'Failed to retrieve dataset details.'
+      setErrorMsg(msg)
+      toast.show('error', msg)
+    }
   }, [toast])
 
   // ── Delete history item ─────────────────────────────────────────────────────
-  const handleDeleteHistory = useCallback((id) => {
-    setHistory((prev) => prev.filter((h) => h.id !== id))
-    toast.show('info', 'Removed from upload history.')
+  const handleDeleteHistory = useCallback(async (id) => {
+    try {
+      await api.deleteDataset(id)
+      setHistory((prev) => prev.filter((h) => h.id !== id))
+      
+      // If we are currently viewing the deleted dataset, reset active view
+      setFile(null)
+      setRawData([])
+      setColumns([])
+      setStatus('idle')
+      setSummary(null)
+      setUploadTime(null)
+      setColAnalysis([])
+      setHealth(null)
+      setQualityChecks([])
+      setSuggestions([])
+      setTransactions(null)
+      setAnalytics(null)
+
+      toast.show('info', 'Dataset deleted from history and server storage.')
+    } catch (err) {
+      toast.show('error', 'Failed to delete dataset from server.')
+    }
   }, [toast])
 
   const isReady = status === 'ready'
