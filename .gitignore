@@ -2,6 +2,15 @@
 node_modules/
 **/node_modules/
 
+# Python caching
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+
 # Production builds
 dist/
 **/dist/
