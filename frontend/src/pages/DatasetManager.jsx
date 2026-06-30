@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Upload, Eye, BarChart2, History, Cpu,
   ChevronRight, Info, Columns, AlertTriangle, Lightbulb,
-  ArrowRightLeft, Sparkles, LayoutDashboard
+  ArrowRightLeft, Sparkles, LayoutDashboard, Play, Loader2
 } from 'lucide-react'
 
 import DatasetUpload       from '../components/dataset/DatasetUpload'
@@ -21,6 +21,8 @@ import CleaningSuggestions from '../components/dataset/CleaningSuggestions'
 import TransactionPreview  from '../components/dataset/TransactionPreview'
 import ReadinessCard       from '../components/dataset/ReadinessCard'
 import AnalyticsOverview   from '../components/dataset/AnalyticsOverview'
+import MiningDashboard     from '../components/dataset/MiningDashboard'
+
 
 // API client utility
 import { api } from '../utils/api'
@@ -95,6 +97,13 @@ export default function DatasetManager() {
   const [suggestions, setSuggestions]   = useState([])
   const [transactions, setTransactions] = useState(null)
   const [analytics, setAnalytics]       = useState(null)
+  const [selectedDatasetId, setSelectedDatasetId] = useState(null)
+
+  // Phase 4 states
+  const [minSupportPct, setMinSupportPct] = useState(0.20)
+  const [minConfidence, setMinConfidence] = useState(0.70)
+  const [miningResults, setMiningResults] = useState(null)
+  const [miningLoading, setMiningLoading] = useState(false)
 
   // ── Session history ─────────────────────────────────────────────────────────
   const [history, setHistory] = useState([])
@@ -130,6 +139,10 @@ export default function DatasetManager() {
       setSuggestions([])
       setTransactions(null)
       setAnalytics(null)
+      
+      // Reset Phase 4 states
+      setSelectedDatasetId(null)
+      setMiningResults(null)
       return
     }
 
@@ -137,6 +150,7 @@ export default function DatasetManager() {
     setStatus('parsing')
     setErrorMsg('')
     setProgress(0)
+    setMiningResults(null)
 
     try {
       // 1. Post upload to backend
@@ -148,6 +162,7 @@ export default function DatasetManager() {
       const fullDetails = await api.getDataset(uploadRes.id)
 
       // 3. Update React states
+      setSelectedDatasetId(uploadRes.id)
       setRawData(fullDetails.previewData || [])
       setColumns(fullDetails.colAnalysis.map(c => c.col))
       setSummary({
@@ -185,10 +200,12 @@ export default function DatasetManager() {
   const handleViewHistory = useCallback(async (item) => {
     setStatus('parsing')
     setProgress(30)
+    setMiningResults(null)
     try {
       const fullDetails = await api.getDataset(item.id)
       setProgress(100)
 
+      setSelectedDatasetId(item.id)
       setRawData(fullDetails.previewData || [])
       setColumns(fullDetails.colAnalysis.map(c => c.col))
       setSummary({
@@ -237,12 +254,44 @@ export default function DatasetManager() {
       setSuggestions([])
       setTransactions(null)
       setAnalytics(null)
+      
+      setSelectedDatasetId(null)
+      setMiningResults(null)
 
       toast.show('info', 'Dataset deleted from history and server storage.')
     } catch (err) {
       toast.show('error', 'Failed to delete dataset from server.')
     }
   }, [toast])
+
+  // ── Run mining engine ───────────────────────────────────────────────────────
+  const handleRunMining = useCallback(async () => {
+    if (!selectedDatasetId) {
+      toast.show('error', 'No dataset loaded to mine.')
+      return
+    }
+
+    setMiningLoading(true)
+    setMiningResults(null)
+
+    try {
+      toast.show('info', 'Initializing C++ DiffNodeset mining engine...')
+      const res = await api.mineDataset(selectedDatasetId, minSupportPct, minConfidence)
+      setMiningResults(res)
+      toast.show('success', `✓ Pattern mining complete! Mined ${res.totalFrequentItemsets.toLocaleString()} itemsets and ${res.totalRules.toLocaleString()} rules in ${res.executionTime}.`)
+      
+      // Smooth scroll to results
+      setTimeout(() => {
+        const el = document.getElementById('mining-results')
+        if (el) el.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
+    } catch (err) {
+      const msg = err.response?.data?.detail || err.message || 'Pattern mining execution failed.'
+      toast.show('error', msg)
+    } finally {
+      setMiningLoading(false)
+    }
+  }, [selectedDatasetId, minSupportPct, minConfidence, toast])
 
   const isReady = status === 'ready'
 
@@ -566,7 +615,7 @@ export default function DatasetManager() {
         />
       </Section>
 
-      {/* ─── 13. Phase 4 Engine Banner ─────────────────────────────────────────── */}
+      {/* ─── 13. Phase 4 Engine Control Panel ──────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -574,42 +623,121 @@ export default function DatasetManager() {
         transition={{ duration: 0.5 }}
         className="relative rounded-2xl overflow-hidden border border-slate-200"
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900" />
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900" />
         <div className="absolute inset-0 opacity-10">
           <div className="grid-pattern h-full" />
         </div>
-        <div className="absolute top-4 left-1/4 w-40 h-40 rounded-full bg-blue-500/20 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-4 right-1/4 w-40 h-40 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" />
+        <div className="absolute top-4 left-1/4 w-40 h-40 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-4 right-1/4 w-40 h-40 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
 
-        <div className="relative p-8 sm:p-12 flex flex-col sm:flex-row items-center gap-8 z-10">
-          <div className="w-16 h-16 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0">
-            <Cpu className="w-8 h-8 text-blue-400" />
-          </div>
-          <div className="flex-1 text-center sm:text-left">
-            <h3 className="text-xl sm:text-2xl font-extrabold text-white mb-2">
-              Ready to Run Pattern Mining?
-            </h3>
-            <p className="text-sm text-slate-400 max-w-lg">
-              The DiffNodeset algorithm will be implemented in Phase 4. The backend API is
-              live and ready — once the C++ engine is connected, it will analyze
-              your dataset to discover frequent symptom combinations, medicine associations, and
-              treatment patterns.
-            </p>
-          </div>
-          <div className="flex flex-col items-center gap-3 shrink-0">
-            <button
-              disabled
-              className="flex items-center gap-2.5 px-6 py-3.5 bg-blue-600/40 border border-blue-500/40 text-blue-300 font-bold text-sm rounded-xl cursor-not-allowed opacity-60 animate-pulse"
-            >
-              <Cpu className="w-4 h-4" />
-              Run Pattern Mining
-            </button>
-            <span className="text-[10px] text-slate-500 bg-slate-800 border border-slate-700 px-3 py-1 rounded-full font-semibold">
-              🔒 Available in Phase 4
-            </span>
+        <div className="relative p-6 sm:p-10 z-10 text-white">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-8">
+            {/* Engine Info */}
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0">
+                <Cpu className="w-6 h-6 text-blue-400" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold">
+                  DiffNodeset Pattern Mining Engine
+                </h3>
+                <p className="text-xs text-slate-400 max-w-lg leading-relaxed">
+                  Analyze the transactional representation of your dataset using the recursive DiffNodeset algorithm. Mined frequent patterns and rules are evaluated with support, confidence, lift, leverage, and conviction metrics.
+                </p>
+              </div>
+            </div>
+
+            {/* Parameters & Trigger */}
+            <div className="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-6 shrink-0 bg-slate-950/40 p-4 border border-slate-800 rounded-xl">
+              {/* Support */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                  <span>Min Support</span>
+                  <span className="text-blue-400 font-mono text-[11px] lowercase">{(minSupportPct * 100).toFixed(0)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.05"
+                  max="1.0"
+                  step="0.05"
+                  disabled={!isReady || miningLoading}
+                  value={minSupportPct}
+                  onChange={(e) => setMinSupportPct(parseFloat(e.target.value))}
+                  className="w-36 accent-blue-500 h-1 rounded bg-slate-800 outline-none cursor-pointer disabled:opacity-40"
+                />
+              </div>
+
+              {/* Confidence */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                  <span>Min Confidence</span>
+                  <span className="text-emerald-400 font-mono text-[11px] lowercase">{(minConfidence * 100).toFixed(0)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="1.0"
+                  step="0.05"
+                  disabled={!isReady || miningLoading}
+                  value={minConfidence}
+                  onChange={(e) => setMinConfidence(parseFloat(e.target.value))}
+                  className="w-36 accent-emerald-500 h-1 rounded bg-slate-800 outline-none cursor-pointer disabled:opacity-40"
+                />
+              </div>
+
+              {/* Action Button */}
+              <div className="pt-2 sm:pt-0 shrink-0">
+                <button
+                  onClick={handleRunMining}
+                  disabled={!isReady || miningLoading}
+                  className={`w-full sm:w-auto px-5 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all border ${
+                    !isReady
+                      ? 'bg-slate-800/40 border-slate-700/40 text-slate-500 cursor-not-allowed opacity-55'
+                      : miningLoading
+                      ? 'bg-blue-600/20 border-blue-500/30 text-blue-300 cursor-wait'
+                      : 'bg-blue-600 border-blue-500 text-white hover:bg-blue-700 hover:shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98]'
+                  }`}
+                >
+                  {miningLoading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Mining Data...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      Run Mining Engine
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </motion.div>
+
+      {/* ─── 14. Mining Dashboard Results ──────────────────────────────────────── */}
+      <AnimatePresence>
+        {miningResults && (
+          <motion.div
+            id="mining-results"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            transition={{ duration: 0.55 }}
+          >
+            <Section
+              id="results"
+              icon={BarChart2}
+              title="DiffNodeset Mining Results & Dashboard"
+              subtitle={`Frequent pattern mining and rule generation summary for dataset: "${file?.name || 'dataset'}"`}
+              badge="Completed"
+            >
+              <MiningDashboard results={miningResults} filename={file?.name} />
+            </Section>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   )

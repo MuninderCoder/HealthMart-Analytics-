@@ -1,7 +1,9 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, status
 from typing import List, Dict, Any
 from backend.app.schemas.dataset import DatasetSummaryResponse, DatasetFullDetailResponse
+from backend.app.schemas.mining import MineRequest, MineResponse
 from backend.app.services.dataset_service import DatasetService
+from backend.app.services.mining_service import MiningService
 
 router = APIRouter()
 
@@ -80,3 +82,34 @@ def delete_dataset(id: str):
             detail=f"Dataset with ID {id} not found."
         )
     return {"message": f"Dataset {id} deleted successfully."}
+
+@router.post("/mine", response_model=MineResponse, tags=["Mining"])
+def mine_dataset(req: MineRequest):
+    try:
+        res = MiningService.run_mining(req.dataset_id, req.minimumSupport, req.minimumConfidence)
+        return MineResponse(
+            status=res.get("status", "completed"),
+            algorithm=res.get("algorithm", "DiffNodeset"),
+            executionTime=res.get("executionTime", "0.0 ms"),
+            memoryUsage=res.get("memoryUsage", "0.0 KB"),
+            totalFrequentItemsets=res.get("totalFrequentItemsets", 0),
+            totalRules=res.get("totalRules", 0),
+            itemsets=res.get("itemsets", []),
+            associationRules=res.get("associationRules", [])
+        )
+    except ValueError as val_err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(val_err)
+        )
+    except FileNotFoundError as fnf_err:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(fnf_err)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Mining failed: {str(e)}"
+        )
+

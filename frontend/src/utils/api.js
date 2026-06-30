@@ -57,4 +57,14 @@ export const api = {
     const res = await apiClient.delete(`/dataset/${id}`)
     return res.data
   },
+
+  // POST mine dataset
+  mineDataset: async (datasetId, minimumSupport, minimumConfidence) => {
+    const res = await apiClient.post('/mine', {
+      dataset_id: datasetId,
+      minimumSupport,
+      minimumConfidence,
+    })
+    return res.data
+  },
 }

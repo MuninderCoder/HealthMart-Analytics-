@@ -12,7 +12,7 @@ HealthMart Analytics is a premium, modern Healthcare Analytics Platform designed
 
 ---
 
-## ✨ Features Completed (Phases 1, 2 & 3)
+## ✨ Features Completed (Phases 1, 2, 3 & 4)
 
 ### 🏥 Phase 1: Landing Page & Navigation
 - **Landing Page**: Responsive layout with smooth Framer Motion micro-animations.
@@ -37,6 +37,13 @@ HealthMart Analytics is a premium, modern Healthcare Analytics Platform designed
 - **File & Metadata Persistence**: Non-database local storage (under `backend/uploads/`) saving both raw files (`{id}.{ext}`) and calculated parsing metadata (`{id}.json`).
 - **Axios Integration**: Frontend communicates with the backend, replacing mock state with real API calls and displaying live upload progress.
 
+### 🚀 Phase 4: C++ DiffNodeset Mining Engine & Dashboard
+- **C++ Mining Engine**: High-performance C++14 engine implementing PPC Tree construction, preorder/postorder numbering traversals, NodeSet generation, and DiffNodeset joins.
+- **Frequent Itemset Mining**: Equivalence-class based recursive mining of k-itemsets utilizing Difference NodeSets.
+- **Association Rule Generation**: Mined rules evaluated by Support, Confidence, Lift, Leverage, and Conviction metrics, sorted by significance.
+- **Interactive Results Dashboard**: Displays paginated frequent itemsets, rules with sliders for lift/confidence filtering, search, sorting, and CSV export.
+- **Visualizations**: Rendered charts using Recharts for top co-occurrence patterns, support distributions, and confidence distributions.
+
 ---
 
 ## 🛠️ Tech Stack
@@ -50,12 +57,12 @@ HealthMart Analytics is a premium, modern Healthcare Analytics Platform designed
 - **Icons**: Lucide React
 - **Navigation**: React Router DOM 7
 
-### Backend:
+### Backend & C++ Engine:
 - **Framework**: FastAPI
 - **Web Server**: Uvicorn
-- **Data Engineering**: Pandas
-- **Excel Reader**: OpenPyXL
-- **File Upload**: python-multipart
+- **Data Engineering**: Pandas, OpenPyXL
+- **C++ Standard**: C++14 / GCC 6.3 (MinGW)
+- **C++ Build System**: Makefile / CMakeLists.txt
 
 ---
 
@@ -83,6 +90,13 @@ HealthMart-Analytics/
 │   │   │   └── parser.py
 │   │   ├── algorithm/
 │   │   └── main.py
+│   ├── algorithm/
+│   │   └── cpp/
+│   │       ├── include/
+│   │       ├── src/
+│   │       ├── tests/
+│   │       ├── Makefile
+│   │       └── CMakeLists.txt
 │   ├── uploads/
 │   └── requirements.txt
 └── frontend/
@@ -91,9 +105,11 @@ HealthMart-Analytics/
     │   ├── assets/
     │   ├── components/
     │   │   └── dataset/
+    │   │       └── MiningDashboard.jsx
     │   ├── data/
     │   ├── layouts/
     │   ├── pages/
+    │   │   └── DatasetManager.jsx
     │   └── utils/
     │       └── api.js
     ├── index.html
@@ -106,43 +122,42 @@ HealthMart-Analytics/
 ## 🚀 Installation & Running Locally
 
 ### Prerequisites
-Make sure you have Node.js (v18+) and Python (v3.10+) installed.
+Make sure you have Node.js (v18+), Python (v3.10+), and a C++ compiler (v14+ compatible, e.g. g++) installed.
 
-### 1. Install Frontend Dependencies
+### 1. Compile the C++ Mining Engine
+```bash
+mingw32-make -C backend/algorithm/cpp all
+```
+
+### 2. Install Frontend Dependencies
 ```bash
 npm install
 ```
 
-### 2. Install Backend Dependencies
+### 3. Install Backend Dependencies
 ```bash
 pip install -r backend/requirements.txt
 ```
 
-### 3. Run Backend Server
+### 4. Run Backend Server
 ```bash
 # Start backend on http://127.0.0.1:8000
-python backend/app/main.py
+python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 *Swagger API Docs are available at: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)*
 
-### 4. Run Frontend Server
+### 5. Run Frontend Server
 ```bash
 # Start React frontend on http://localhost:5173
 npm run dev
 ```
 
-### 5. Build Production Bundle
-```bash
-npm run build
-```
-
 ---
 
-## 🗺️ Future Roadmap (Phase 4)
-- **DiffNodeset Mining Engine**: Connect the C++ frequent itemset mining engine to discover complex disease and medicine combinations.
-- **Interactive Rule Visualizer**: Live association rule graphs showing Support, Confidence, and Lift metrics.
-- **AI-generated Explanations**: Natural language summaries of discovered healthcare trends.
-- **Database & Authentication**: Secure persistent storage and user accounts.
+## 🗺️ Future Roadmap (Phase 5)
+- **AI Insights & LLM Integration**: Generate natural language explanations of mined symptom co-occurrences and treatment recommendations.
+- **Interactive Rule Graph Visualizer**: Interactive network graphs of rules.
+- **Database & Authentication**: Move to standard databases (PostgreSQL) and add user accounts.
 
 ---
 
