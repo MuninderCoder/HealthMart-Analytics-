@@ -479,7 +479,7 @@ export default function DatasetManager() {
               id="suggestions"
               icon={Lightbulb}
               title="Data Cleaning Advice Recommendations"
-              subtitle="Suggested non-destructive optimizations to maximize pattern mining accuracy in Phase 3"
+              subtitle="Suggested non-destructive optimizations to maximize pattern mining accuracy"
             >
               <CleaningSuggestions suggestions={suggestions} />
             </Section>
@@ -566,7 +566,7 @@ export default function DatasetManager() {
         />
       </Section>
 
-      {/* ─── 13. Locked Phase 3 Engine Banner ─────────────────────────────────── */}
+      {/* ─── 13. Phase 4 Engine Banner ─────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -590,7 +590,8 @@ export default function DatasetManager() {
               Ready to Run Pattern Mining?
             </h3>
             <p className="text-sm text-slate-400 max-w-lg">
-              The DiffNodeset engine will be connected in Phase 3. Once activated, it will analyze
+              The DiffNodeset algorithm will be implemented in Phase 4. The backend API is
+              live and ready — once the C++ engine is connected, it will analyze
               your dataset to discover frequent symptom combinations, medicine associations, and
               treatment patterns.
             </p>
@@ -604,7 +605,7 @@ export default function DatasetManager() {
               Run Pattern Mining
             </button>
             <span className="text-[10px] text-slate-500 bg-slate-800 border border-slate-700 px-3 py-1 rounded-full font-semibold">
-              🔒 Available in Phase 3
+              🔒 Available in Phase 4
             </span>
           </div>
         </div>

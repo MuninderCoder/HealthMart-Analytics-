@@ -28,7 +28,7 @@ export default function DiseaseAnalytics() {
           <Activity className="w-6 h-6 text-blue-600" />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-bold text-slate-800">Full analytics coming in Phase 3</p>
+          <p className="text-sm font-bold text-slate-800">Full analytics coming in Phase 4 — DiffNodeset Mining</p>
           <p className="text-xs text-slate-500 mt-0.5">Upload a dataset in the Dataset Manager to enable live disease pattern analysis.</p>
         </div>
         <NavLink to="/app/dataset-manager"

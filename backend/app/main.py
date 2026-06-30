@@ -45,5 +45,13 @@ app.include_router(api_router, prefix="/api")
 def read_root():
     return {"status": "online", "message": "Welcome to HealthMart Analytics REST API"}
 
+@app.get("/health")
+def root_health():
+    return {
+        "status": "healthy",
+        "service": "HealthMart Analytics Backend",
+        "engine": "Ready for DiffNodeset"
+    }
+
 if __name__ == "__main__":
     uvicorn.run("backend.app.main:app", host="127.0.0.1", port=8000, reload=True)

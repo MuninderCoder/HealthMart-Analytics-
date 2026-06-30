@@ -24,7 +24,7 @@ export default function Reports() {
       >
         <FileText className="w-8 h-8 text-blue-500 shrink-0" />
         <div>
-          <p className="text-sm font-bold text-slate-800">AI-Generated Reports — Phase 3</p>
+          <p className="text-sm font-bold text-slate-800">AI-Generated Reports — Phase 4</p>
           <p className="text-xs text-slate-500 mt-0.5">Reports with natural language explanations will auto-generate after dataset analysis runs.</p>
         </div>
       </motion.div>

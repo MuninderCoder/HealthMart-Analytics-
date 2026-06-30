@@ -22,7 +22,7 @@ export default function MedicineAnalytics() {
           <Pill className="w-6 h-6 text-emerald-600" />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-bold text-slate-800">Medicine association mining — Phase 3</p>
+          <p className="text-sm font-bold text-slate-800">Medicine association mining — Phase 4 (DiffNodeset)</p>
           <p className="text-xs text-slate-500 mt-0.5">Upload pharmacy or prescription data to discover co-prescription patterns using Apriori & DiffNodeset.</p>
         </div>
         <NavLink to="/app/dataset-manager"
@@ -58,7 +58,7 @@ export default function MedicineAnalytics() {
         {/* Association rules preview */}
         <div className="bg-white rounded-xl border border-slate-200 p-5">
           <h3 className="text-sm font-bold text-slate-900 mb-1">Association Rules</h3>
-          <p className="text-[10px] text-slate-400 mb-4">Sample data · Phase 3 will generate from your dataset</p>
+          <p className="text-[10px] text-slate-400 mb-4">Sample data · Phase 4 will generate live from your dataset</p>
           <div className="space-y-2.5">
             {medicineAssociations.map((ma, i) => (
               <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100 hover:border-emerald-200 transition-colors">

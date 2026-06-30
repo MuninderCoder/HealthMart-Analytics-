@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Activity, LayoutDashboard, Database, Pill,
   FileText, Settings, Upload, Bell, Search, ChevronRight,
-  LogOut, User, Menu, X, Sparkles, HelpCircle
+  LogOut, User, Menu, X, Sparkles, HelpCircle, Wifi, WifiOff
 } from 'lucide-react'
+import { api } from '../utils/api'
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', to: '/app/dashboard' },
@@ -111,10 +112,10 @@ function Sidebar({ collapsed, setCollapsed }) {
           <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/10 to-emerald-500/10 border border-slate-700/50 mb-2">
             <div className="flex items-center gap-2 mb-1.5">
               <Sparkles className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-              <p className="text-[10px] font-semibold text-slate-300">Phase 3 Coming</p>
+              <p className="text-[10px] font-semibold text-slate-300">Phase 4 — DiffNodeset</p>
             </div>
             <p className="text-[9px] text-slate-500 leading-relaxed">
-              DiffNodeset mining engine will unlock advanced pattern discovery.
+              Pattern mining engine coming next. Backend API is live.
             </p>
           </div>
         )}
@@ -132,6 +133,23 @@ function Sidebar({ collapsed, setCollapsed }) {
 }
 
 function TopBar({ mobileMenuOpen, setMobileMenuOpen }) {
+  const [backendStatus, setBackendStatus] = useState('checking') // 'checking' | 'online' | 'offline'
+
+  useEffect(() => {
+    let cancelled = false
+    const check = async () => {
+      try {
+        await api.checkHealth()
+        if (!cancelled) setBackendStatus('online')
+      } catch {
+        if (!cancelled) setBackendStatus('offline')
+      }
+    }
+    check()
+    const interval = setInterval(check, 30000)
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [])
+
   return (
     <header className="h-16 bg-white border-b border-slate-200 flex items-center px-4 sm:px-6 gap-4 shrink-0 sticky top-0 z-30">
       {/* Mobile menu toggle */}
@@ -156,6 +174,25 @@ function TopBar({ mobileMenuOpen, setMobileMenuOpen }) {
       </div>
 
       <div className="flex items-center gap-2 ml-auto">
+        {/* Backend status indicator */}
+        <div
+          title={backendStatus === 'online' ? 'Backend API online' : backendStatus === 'offline' ? 'Backend API offline' : 'Checking backend...'}
+          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-semibold transition-all"
+          style={{
+            background: backendStatus === 'online' ? 'rgb(240 253 244)' : backendStatus === 'offline' ? 'rgb(255 241 242)' : 'rgb(248 250 252)',
+            borderColor: backendStatus === 'online' ? 'rgb(187 247 208)' : backendStatus === 'offline' ? 'rgb(254 205 211)' : 'rgb(226 232 240)',
+            color: backendStatus === 'online' ? 'rgb(21 128 61)' : backendStatus === 'offline' ? 'rgb(190 18 60)' : 'rgb(100 116 139)',
+          }}
+        >
+          {backendStatus === 'online' ? (
+            <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />API Online</>
+          ) : backendStatus === 'offline' ? (
+            <><WifiOff className="w-3 h-3" />API Offline</>
+          ) : (
+            <><span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" />Connecting...</>
+          )}
+        </div>
+
         {/* Upload button */}
         <NavLink
           to="/app/dataset-manager"

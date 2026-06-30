@@ -39,7 +39,7 @@ export default function ReadinessCard({ parsed = false, preview = false, columns
 
           <div className="pt-2">
             <span className="text-[10px] text-slate-400 bg-slate-800 border border-slate-700 px-3 py-1 rounded-full font-semibold">
-              🔒 DiffNodeset Mining Engine will be connected in Phase 3
+              🔒 DiffNodeset Mining Engine — Available in Phase 4
             </span>
           </div>
         </div>

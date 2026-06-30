@@ -1,16 +1,23 @@
 import axios from 'axios'
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api'
+const BASE_URL = 'http://127.0.0.1:8000'
 
-const client = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 30000, // 30 seconds timeout for processing larger files
+// Root-level client (for /health connectivity check)
+const rootClient = axios.create({
+  baseURL: BASE_URL,
+  timeout: 5000,
+})
+
+// API client (for all /api/* dataset endpoints)
+const apiClient = axios.create({
+  baseURL: `${BASE_URL}/api`,
+  timeout: 30000, // 30 seconds for larger file parsing
 })
 
 export const api = {
-  // GET health check
+  // GET root-level health check — used for backend status indicator
   checkHealth: async () => {
-    const res = await client.get('/health')
+    const res = await rootClient.get('/health')
     return res.data
   },
 
@@ -19,7 +26,7 @@ export const api = {
     const formData = new FormData()
     formData.append('file', file)
 
-    const res = await client.post('/upload', formData, {
+    const res = await apiClient.post('/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -35,19 +42,19 @@ export const api = {
 
   // GET list all datasets
   getDatasets: async () => {
-    const res = await client.get('/datasets')
+    const res = await apiClient.get('/datasets')
     return res.data
   },
 
   // GET single dataset details
   getDataset: async (id) => {
-    const res = await client.get(`/dataset/${id}`)
+    const res = await apiClient.get(`/dataset/${id}`)
     return res.data
   },
 
   // DELETE dataset
   deleteDataset: async (id) => {
-    const res = await client.delete(`/dataset/${id}`)
+    const res = await apiClient.delete(`/dataset/${id}`)
     return res.data
   },
 }
