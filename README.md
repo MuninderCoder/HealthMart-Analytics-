@@ -12,7 +12,7 @@ HealthMart Analytics is a premium, modern Healthcare Analytics Platform designed
 
 ---
 
-## ✨ Features Completed (Phases 1, 2, 3 & 4)
+## ✨ Features Completed (Phases 1, 2, 3, 4, 5 & 6)
 
 ### 🏥 Phase 1: Landing Page & Navigation
 - **Landing Page**: Responsive layout with smooth Framer Motion micro-animations.
@@ -43,6 +43,17 @@ HealthMart Analytics is a premium, modern Healthcare Analytics Platform designed
 - **Association Rule Generation**: Mined rules evaluated by Support, Confidence, Lift, Leverage, and Conviction metrics, sorted by significance.
 - **Interactive Results Dashboard**: Displays paginated frequent itemsets, rules with sliders for lift/confidence filtering, search, sorting, and CSV export.
 - **Visualizations**: Rendered charts using Recharts for top co-occurrence patterns, support distributions, and confidence distributions.
+
+### 🔗 Phase 5: Complete End-to-End Integration
+- **State Synchronization**: Cache selected dataset ID, filename, and mined results inside `localStorage` for cross-page persistence.
+- **Global Parameter Settings**: Threshold inputs from Settings page synchronize with the Dataset Manager run controllers.
+- **Subprocess Bridge**: Integrates direct FastAPI endpoints to execute compiled binaries dynamically.
+
+### 📊 Phase 6: Advanced Analytics, Visualizations & Reporting
+- **Pattern Explorer**: Dedicated interactive explorer allowing search, sort, support filtering, and transaction scanning with color-coded medical highlights.
+- **Advanced Visualizations**: Pie charts for complaints, histograms for support bins, bubble charts for confidence-lift, and line charts for C++ timing pipelines.
+- **Executive PDF Reports**: Styled HTML print frameworks for download of frequent itemsets, rules, and platform performance diagnostics.
+- **Medical Insights**: Template-based clinical notes generated natively from mined rule sets without external model dependencies.
 
 ---
 
@@ -252,7 +263,7 @@ Thanks to the compiled C++14 engine and the DiffNodeset representation, the plat
 
 ---
 
-## 🔮 Upcoming Phase: AI Insights & LLM Integration (Phase 6)
+## 🔮 Upcoming Phase: AI Insights & LLM Integration (Phase 7)
 * **Natural Language Summaries**: Automatically explain co-prescription combinations and symptoms.
 * **Automated Clinical Recommendations**: Suggest department routing and medication double-checks using generative clinical agents.
 

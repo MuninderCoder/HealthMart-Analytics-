@@ -13,6 +13,7 @@ const navItems = [
   { icon: Database, label: 'Dataset Manager', to: '/app/dataset-manager', badge: 'New' },
   { icon: Activity, label: 'Disease Analytics', to: '/app/disease-analytics' },
   { icon: Pill, label: 'Medicine Analytics', to: '/app/medicine-analytics' },
+  { icon: Search, label: 'Pattern Explorer', to: '/app/pattern-explorer' },
   { icon: FileText, label: 'Reports', to: '/app/reports' },
   { icon: Settings, label: 'Settings', to: '/app/settings' },
 ]

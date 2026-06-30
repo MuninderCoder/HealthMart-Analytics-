@@ -1,36 +1,54 @@
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useMemo } from 'react'
+import { motion } from 'framer-motion'
 import {
-  TrendingUp, TrendingDown, Database,
-  Activity, Sparkles, Clock, MoreHorizontal,
-  Upload, ChevronRight, AlertCircle
+  TrendingUp, Database, Activity, Sparkles, Clock, Upload, ChevronRight,
+  AlertCircle, Pill, ShieldAlert, Cpu, Heart, CheckCircle2, ListFilter
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { api } from '../utils/api'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, ScatterChart, Scatter, ZAxis, AreaChart, Area, Legend
+} from 'recharts'
 
-const PIE_COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#374151', '#06b6d4', '#84cc16']
+const PIE_COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4', '#14b8a6', '#f43f5e']
 
-function KpiCard({ title, value, change, positive, icon: Icon, color }) {
-  return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-all duration-200"
-    >
-      <div className="flex items-start justify-between mb-3">
-        <p className="text-xs font-medium text-slate-500">{title}</p>
-        <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center`}>
-          <Icon className="w-4 h-4 text-white" />
-        </div>
-      </div>
-      <p className="text-2xl font-extrabold text-slate-900 mb-1.5">{value}</p>
-      <div className={`flex items-center gap-1 text-[10px] sm:text-xs font-medium ${positive ? 'text-emerald-600' : 'text-rose-500'}`}>
-        {positive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-        {change}
-        <span className="text-slate-400 font-normal ml-0.5">vs last month</span>
-      </div>
-    </motion.div>
-  )
+// Animated Counter component
+function AnimatedCounter({ value, prefix = '', suffix = '' }) {
+  const [displayVal, setDisplayVal] = useState('0')
+  
+  useEffect(() => {
+    const strVal = String(value)
+    const numMatch = strVal.match(/[\d.]+/)
+    if (!numMatch) {
+      setDisplayVal(strVal)
+      return
+    }
+    const targetNum = parseFloat(numMatch[0])
+    const currentSuffix = suffix || strVal.replace(numMatch[0], '')
+    
+    let start = 0
+    const steps = 30
+    const stepValue = targetNum / steps
+    const stepTime = 15
+    let currentStep = 0
+    
+    const timer = setInterval(() => {
+      currentStep += 1
+      start += stepValue
+      if (currentStep >= steps) {
+        clearInterval(timer)
+        setDisplayVal(strVal)
+      } else {
+        const formatted = targetNum % 1 === 0 ? Math.floor(start) : start.toFixed(2)
+        setDisplayVal(`${prefix}${parseFloat(formatted).toLocaleString()}${currentSuffix}`)
+      }
+    }, stepTime)
+    
+    return () => clearInterval(timer)
+  }, [value, prefix, suffix])
+  
+  return <span>{displayVal}</span>
 }
 
 export default function AppDashboard() {
@@ -40,14 +58,9 @@ export default function AppDashboard() {
   const [loading, setLoading] = useState(false)
   
   // Mining stats cached locally
-  const [minedStats, setMinedStats] = useState({
-    itemsetsCount: 0,
-    rulesCount: 0,
-    time: '0.00 ms',
-    itemsets: []
-  })
+  const [minedResults, setMinedResults] = useState(null)
 
-  // 1. Load history list and active mining result on mount
+  // 1. Fetch available datasets and check local storage on mount
   useEffect(() => {
     const fetchHistory = async () => {
       try {
@@ -67,13 +80,7 @@ export default function AppDashboard() {
     const savedMining = localStorage.getItem('hm_mining_results')
     if (savedMining) {
       try {
-        const parsed = JSON.parse(savedMining)
-        setMinedStats({
-          itemsetsCount: parsed.totalFrequentItemsets || 0,
-          rulesCount: parsed.totalRules || 0,
-          time: parsed.executionTime || '0.00 ms',
-          itemsets: parsed.itemsets || []
-        })
+        setMinedResults(JSON.parse(savedMining))
       } catch (_) {}
     }
   }, [])
@@ -94,39 +101,136 @@ export default function AppDashboard() {
     fetchDetails()
   }, [selectedId])
 
-  const totalRecords = datasetDetails?.rows || 0
-  const diseaseData = datasetDetails?.analytics?.diseases?.items || []
-  const medicineData = datasetDetails?.analytics?.medicines?.items || []
+  // Extract analytics metrics
+  const totalDatasets = datasets.length
+  const totalTransactions = datasetDetails?.transactions?.total || 0
+  const totalItemsets = minedResults?.totalFrequentItemsets || 0
+  const totalRules = minedResults?.totalRules || 0
+  const executionTime = minedResults?.executionTime || '0.00 ms'
+  const memoryUsage = minedResults?.memoryUsage || '0.00 KB'
 
-  const pieData = medicineData.map(d => ({
-    name: d.name,
-    value: d.count
-  }))
+  const diseaseItems = datasetDetails?.analytics?.diseases?.items || []
+  const topDisease = diseaseItems[0]?.name || 'None'
+  const topDiseasePct = diseaseItems[0]?.pct || '0'
+  
+  const medicineItems = datasetDetails?.analytics?.medicines?.items || []
+  const topMedicine = medicineItems[0]?.name || 'None'
+  
+  const symptomItems = datasetDetails?.analytics?.symptoms?.items || []
+  const topSymptom = symptomItems[0]?.name || 'None'
+
+  // Chart data calculations
+  const symptomPieData = useMemo(() => {
+    return symptomItems.slice(0, 5).map(s => ({
+      name: s.name,
+      value: s.count
+    }))
+  }, [symptomItems])
+
+  // Histogram of Support values (Binned: 0-20%, 20-40%, 40-60%, 60-80%, 80-100%)
+  const supportHistogramData = useMemo(() => {
+    if (!minedResults || !minedResults.itemsets) return []
+    const bins = { '5-20%': 0, '20-40%': 0, '40-60%': 0, '60-80%': 0, '80-100%': 0 }
+    
+    minedResults.itemsets.forEach(item => {
+      const pct = item.supportPct * 100
+      if (pct <= 20) bins['5-20%'] += 1
+      else if (pct <= 40) bins['20-40%'] += 1
+      else if (pct <= 60) bins['40-60%'] += 1
+      else if (pct <= 80) bins['60-80%'] += 1
+      else bins['80-100%'] += 1
+    })
+
+    return Object.entries(bins).map(([bin, count]) => ({ bin, count }))
+  }, [minedResults])
+
+  // Scatter plot data for Confidence vs Lift, sized by Support
+  const scatterPlotData = useMemo(() => {
+    if (!minedResults || !minedResults.associationRules) return []
+    return minedResults.associationRules.map((rule, idx) => ({
+      id: idx,
+      confidence: parseFloat((rule.confidence * 100).toFixed(1)),
+      lift: parseFloat(rule.lift.toFixed(2)),
+      support: parseFloat((rule.supportPct * 100).toFixed(1)),
+      name: `${rule.antecedent.join(',')} → ${rule.consequent.join(',')}`
+    }))
+  }, [minedResults])
+
+  // Timings timeline from engine stats
+  const performanceTimeline = useMemo(() => {
+    if (!minedResults || !minedResults.stats) return []
+    const st = minedResults.stats
+    return [
+      { name: 'File Parsing', duration: parseFloat(st.parseTimeMs.toFixed(2)) },
+      { name: 'Tree Build', duration: parseFloat(st.treeTimeMs.toFixed(2)) },
+      { name: 'NodeSets Gen', duration: parseFloat(st.nodeSetTimeMs.toFixed(2)) },
+      { name: 'DiffNodeset Join', duration: parseFloat(st.diffNodeSetTimeMs.toFixed(2)) },
+    ]
+  }, [minedResults])
+
+  // Medical Insights templates
+  const medicalInsights = useMemo(() => {
+    if (!minedResults || !minedResults.associationRules) return []
+    const rules = minedResults.associationRules
+    const insights = []
+
+    const symptomWords = ['fever', 'cough', 'ache', 'pain', 'cold', 'flu', 'sore', 'throat', 'headache', 'congestion']
+    const diseaseWords = ['diabetes', 'hypertension', 'asthma', 'copd', 'heart', 'cardiology', 'stroke', 'kidney', 'cancer']
+    const medicineWords = ['metformin', 'lisinopril', 'insulin', 'albuterol', 'aspirin', 'atorvastatin', 'paracetamol', 'ibuprofen']
+
+    const checkType = (arr, keywords) => {
+      return arr.some(item => keywords.some(k => item.toLowerCase().includes(k)))
+    }
+
+    rules.forEach(rule => {
+      const isAntecedentSymptom = checkType(rule.antecedent, symptomWords)
+      const isConsequentDisease = checkType(rule.consequent, diseaseWords)
+      
+      const isAntecedentDisease = checkType(rule.antecedent, diseaseWords)
+      const isConsequentMedicine = checkType(rule.consequent, medicineWords)
+
+      if (isAntecedentSymptom && isConsequentDisease) {
+        insights.push({
+          type: 'Symptom-Diagnosis',
+          text: `Symptoms [${rule.antecedent.join(', ')}] are strongly linked with [${rule.consequent.join(', ')}] diagnoses (Confidence: ${(rule.confidence * 100).toFixed(0)}%).`
+        })
+      } else if (isAntecedentDisease && isConsequentMedicine) {
+        insights.push({
+          type: 'Disease-Medication',
+          text: `Patients diagnosed with [${rule.antecedent.join(', ')}] frequently receive [${rule.consequent.join(', ')}] prescriptions (Confidence: ${(rule.confidence * 100).toFixed(0)}%).`
+        })
+      } else if (rule.confidence >= 0.8) {
+        insights.push({
+          type: 'General Co-occurrence',
+          text: `Co-prescription pattern [${rule.antecedent.join(', ')}] indicates high occurrence of [${rule.consequent.join(', ')}] (Lift: ${rule.lift.toFixed(1)}x).`
+        })
+      }
+    })
+
+    return insights.slice(0, 4) // Show top 4
+  }, [minedResults])
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-wrap items-center justify-between gap-4"
-      >
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
             <span>App</span>
             <ChevronRight className="w-3 h-3" />
             <span className="text-slate-700 font-semibold">Dashboard</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Overview Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Executive Overview</h1>
           <p className="text-sm text-slate-500 mt-1">Platform intelligence metrics and quick diagnostic summaries.</p>
         </div>
         
+        {/* Selector */}
         <div className="flex items-center gap-3">
           {datasets.length > 0 && (
             <select
               value={selectedId}
               onChange={(e) => setSelectedId(e.target.value)}
-              className="text-xs border border-slate-200 rounded-xl px-3 py-2 text-slate-700 bg-white outline-none focus:border-blue-500 transition-colors w-48"
+              className="text-xs border border-slate-200 rounded-xl px-3 py-2 text-slate-700 bg-white outline-none focus:border-blue-500 transition-colors w-48 shrink-0"
             >
               {datasets.map(d => (
                 <option key={d.id} value={d.id}>{d.filename}</option>
@@ -141,20 +245,12 @@ export default function AppDashboard() {
             Upload Dataset
           </NavLink>
         </div>
-      </motion.div>
-
-      {/* KPIs */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <KpiCard title="Total Records" value={totalRecords ? totalRecords.toLocaleString() : '0'} change="+100%" positive icon={Database} color="bg-blue-500" />
-        <KpiCard title="Active Patterns" value={minedStats.itemsetsCount.toLocaleString()} change="+8.1%" positive icon={Activity} color="bg-emerald-500" />
-        <KpiCard title="Associations" value={minedStats.rulesCount.toLocaleString()} change="+15.2%" positive icon={Sparkles} color="bg-violet-500" />
-        <KpiCard title="DiffNodeset Time" value={minedStats.time} change="-3.5ms" positive icon={Clock} color="bg-amber-500" />
       </div>
 
       {loading ? (
         <div className="h-64 flex flex-col items-center justify-center gap-3 bg-white border border-slate-200 rounded-2xl">
           <div className="w-8 h-8 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
-          <p className="text-xs font-semibold text-slate-500">Loading dashboard visualizations...</p>
+          <p className="text-xs font-semibold text-slate-500">Syncing visualization metrics...</p>
         </div>
       ) : !selectedId ? (
         <div className="h-64 flex flex-col items-center justify-center gap-3 bg-slate-50 border border-slate-200 border-dashed rounded-2xl text-center p-6">
@@ -164,132 +260,260 @@ export default function AppDashboard() {
         </div>
       ) : (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-          {/* Main Visualizations Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            {/* Top Diseases List */}
-            <div className="bg-white rounded-xl border border-slate-200 p-5 lg:col-span-2">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-slate-900">Diagnosis Workload</h3>
-                <NavLink to="/app/disease-analytics" className="text-xs text-blue-600 hover:underline">View all</NavLink>
+          {/* KPI grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-9 gap-4">
+            {/* Row 1 */}
+            <div className="xl:col-span-3 bg-white p-4 border border-slate-200 rounded-2xl shadow-sm space-y-2">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Storage Datasets</span>
+              <div className="flex items-end justify-between">
+                <span className="text-2xl font-extrabold text-slate-900"><AnimatedCounter value={totalDatasets} /></span>
+                <span className="text-xs text-blue-600 font-semibold">files uploaded</span>
               </div>
-              <div className="space-y-3">
-                {diseaseData.slice(0, 5).map((d, i) => (
-                  <div key={d.name} className="flex items-center gap-3">
-                    <span className="text-[10px] font-bold text-slate-400 w-4">{i + 1}</span>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium text-slate-700">{d.name}</span>
-                        <span className="text-[10px] font-mono text-slate-500">{d.count} ({d.pct}%)</span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                        <motion.div
-                          className="h-full rounded-full bg-blue-500"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${parseFloat(d.pct)}%` }}
-                          transition={{ delay: i * 0.1, duration: 0.7 }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {diseaseData.length === 0 && (
-                  <p className="text-xs text-slate-400 italic">No disease column identified in dataset</p>
-                )}
+            </div>
+            <div className="xl:col-span-3 bg-white p-4 border border-slate-200 rounded-2xl shadow-sm space-y-2">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Total Transactions</span>
+              <div className="flex items-end justify-between">
+                <span className="text-2xl font-extrabold text-slate-900"><AnimatedCounter value={totalTransactions} /></span>
+                <span className="text-xs text-emerald-600 font-semibold">records parsed</span>
+              </div>
+            </div>
+            <div className="xl:col-span-3 bg-white p-4 border border-slate-200 rounded-2xl shadow-sm space-y-2">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Frequent Itemsets</span>
+              <div className="flex items-end justify-between">
+                <span className="text-2xl font-extrabold text-slate-900"><AnimatedCounter value={totalItemsets} /></span>
+                <span className="text-xs text-violet-600 font-semibold">patterns found</span>
               </div>
             </div>
 
-            {/* Medicine Distribution Pie */}
-            <div className="bg-white rounded-xl border border-slate-200 p-5">
-              <h3 className="text-sm font-bold text-slate-900 mb-4">Medicine Distribution</h3>
-              <div className="h-44">
+            {/* Row 2 */}
+            <div className="xl:col-span-3 bg-white p-4 border border-slate-200 rounded-2xl shadow-sm space-y-2">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Association Rules</span>
+              <div className="flex items-end justify-between">
+                <span className="text-2xl font-extrabold text-slate-900"><AnimatedCounter value={totalRules} /></span>
+                <span className="text-xs text-pink-600 font-semibold">rules extracted</span>
+              </div>
+            </div>
+            <div className="xl:col-span-3 bg-white p-4 border border-slate-200 rounded-2xl shadow-sm space-y-2">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Mining Execution Speed</span>
+              <div className="flex items-end justify-between">
+                <span className="text-2xl font-extrabold text-slate-900 font-mono"><AnimatedCounter value={executionTime} /></span>
+                <span className="text-xs text-amber-600 font-semibold">C++ processing</span>
+              </div>
+            </div>
+            <div className="xl:col-span-3 bg-white p-4 border border-slate-200 rounded-2xl shadow-sm space-y-2">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">RAM Usage</span>
+              <div className="flex items-end justify-between">
+                <span className="text-2xl font-extrabold text-slate-900 font-mono"><AnimatedCounter value={memoryUsage} /></span>
+                <span className="text-xs text-cyan-600 font-semibold">allocation cache</span>
+              </div>
+            </div>
+
+            {/* Row 3 */}
+            <div className="xl:col-span-3 bg-white p-4 border border-slate-200 rounded-2xl shadow-sm space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Top Diagnosis Case</span>
+              <p className="text-sm font-bold text-slate-800 truncate">{topDisease}</p>
+              <p className="text-[10px] text-slate-400">{topDiseasePct}% prevalence</p>
+            </div>
+            <div className="xl:col-span-3 bg-white p-4 border border-slate-200 rounded-2xl shadow-sm space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Top Prescribed Medication</span>
+              <p className="text-sm font-bold text-emerald-600 truncate">{topMedicine}</p>
+              <p className="text-[10px] text-slate-400">frequency leader</p>
+            </div>
+            <div className="xl:col-span-3 bg-white p-4 border border-slate-200 rounded-2xl shadow-sm space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Top Patient Symptom</span>
+              <p className="text-sm font-bold text-violet-600 truncate">{topSymptom}</p>
+              <p className="text-[10px] text-slate-400">presenting complaint</p>
+            </div>
+          </div>
+
+          {/* Charts visualizations grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {/* Chart 1: Disease Case Counts */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-1">
+                <Heart className="w-4 h-4 text-rose-500" /> Disease Prevalence
+              </h3>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={diseaseItems.slice(0, 5)} layout="vertical" margin={{ left: -10, right: 10, top: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 9 }} />
+                    <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} width={75} />
+                    <Tooltip contentStyle={{ fontSize: 10, borderRadius: 8 }} />
+                    <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Chart 2: Medicine Prescriptions */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-1">
+                <Pill className="w-4 h-4 text-emerald-500" /> Prescribed Medications
+              </h3>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={medicineItems.slice(0, 5)} margin={{ left: -25, right: 0, top: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 9 }} />
+                    <Tooltip contentStyle={{ fontSize: 10, borderRadius: 8 }} />
+                    <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Chart 3: Symptoms Pie */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-1">
+                <Activity className="w-4 h-4 text-violet-500" /> Patient Complaints
+              </h3>
+              <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={62} paddingAngle={2} dataKey="value">
-                      {pieData.map((_, i) => (
+                    <Pie data={symptomPieData} cx="50%" cy="50%" innerRadius={42} outerRadius={65} paddingAngle={2} dataKey="value">
+                      {symptomPieData.map((_, i) => (
                         <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={{ fontSize: 11, borderRadius: 12, border: '1px solid #e2e8f0' }} />
+                    <Tooltip contentStyle={{ fontSize: 10, borderRadius: 8 }} />
+                    <Legend wrapperStyle={{ fontSize: 9, paddingTop: 10 }} />
                   </PieChart>
                 </ResponsiveContainer>
-              </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 justify-center mt-3 text-[10px] text-slate-500">
-                {medicineData.slice(0, 4).map((m, i) => (
-                  <div key={m.name} className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                    <span className="truncate max-w-[80px] font-semibold">{m.name}</span>
-                  </div>
-                ))}
               </div>
             </div>
           </div>
 
-          {/* Recent Uploads Widget & Frequent Itemsets */}
+          {/* Mining stats charts: Histogram, Scatter, and Performance */}
+          {minedResults ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              {/* Histogram: Support Distribution */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-1">
+                  <ListFilter className="w-4 h-4 text-indigo-500" /> Support Histogram
+                </h3>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={supportHistogramData} margin={{ left: -25, right: 0, top: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      <XAxis dataKey="bin" tick={{ fontSize: 9 }} />
+                      <YAxis tick={{ fontSize: 9 }} />
+                      <Tooltip contentStyle={{ fontSize: 10, borderRadius: 8 }} />
+                      <Bar dataKey="count" name="Itemsets" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Scatter: Confidence vs Lift */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-1">
+                  <Sparkles className="w-4 h-4 text-violet-500" /> Rule Confidence Matrix
+                </h3>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart margin={{ left: -20, right: 10, top: 10, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis type="number" dataKey="confidence" name="Confidence" unit="%" tick={{ fontSize: 9 }} />
+                      <YAxis type="number" dataKey="lift" name="Lift" tick={{ fontSize: 9 }} />
+                      <ZAxis type="number" dataKey="support" range={[40, 200]} name="Support" unit="%" />
+                      <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ fontSize: 10, borderRadius: 8 }} />
+                      <Scatter name="Rules" data={scatterPlotData} fill="#8b5cf6" />
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Performance timeline */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-1">
+                  <Cpu className="w-4 h-4 text-amber-500" /> C++ Engine Execution Timeline
+                </h3>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={performanceTimeline} margin={{ left: -20, right: 10, top: 10, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorDur" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.15}/>
+                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 8 }} />
+                      <YAxis tick={{ fontSize: 9 }} />
+                      <Tooltip contentStyle={{ fontSize: 10, borderRadius: 8 }} />
+                      <Area type="monotone" dataKey="duration" name="Duration (ms)" stroke="#f59e0b" fillOpacity={1} fill="url(#colorDur)" strokeWidth={2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Medical Insights & Performance Stats */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* Top Frequent Mined Patterns */}
-            <div className="bg-white rounded-xl border border-slate-200 p-5">
-              <h3 className="text-sm font-bold text-slate-900 mb-4">Frequent Symptom Patterns</h3>
-              <div className="space-y-3">
-                {minedStats.itemsets.slice(0, 4).map((item, idx) => (
-                  <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <p className="text-xs font-semibold text-slate-700 leading-snug font-mono">
-                        {item.itemset.join(', ')}
-                      </p>
-                      <span className="text-[9px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 shrink-0">
-                        Level {item.level}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-1 rounded-full bg-slate-200 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
-                          style={{ width: `${item.supportPct * 100}%` }}
-                        />
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-bold shrink-0">
-                        {(item.supportPct * 100).toFixed(0)}% support
-                      </span>
-                    </div>
+            {/* Medical Insights */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-blue-500" /> Discovered Clinical Summaries
+              </h3>
+              
+              <div className="space-y-3 flex-1 overflow-y-auto max-h-64 pr-1">
+                {medicalInsights.map((insight, idx) => (
+                  <div key={idx} className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-1 hover:border-blue-200 transition-colors">
+                    <span className="text-[9px] uppercase font-bold text-blue-600 block tracking-wider">{insight.type}</span>
+                    <p className="text-xs text-slate-700 leading-relaxed font-medium">{insight.text}</p>
                   </div>
                 ))}
-                {minedStats.itemsets.length === 0 && (
-                  <div className="h-40 flex flex-col items-center justify-center gap-2 border border-slate-200 border-dashed rounded-xl text-center">
-                    <Activity className="w-6 h-6 text-slate-400" />
-                    <p className="text-xs font-bold text-slate-600">No Mined Patterns Yet</p>
-                    <p className="text-[10px] text-slate-400">Run pattern mining in Dataset Manager to find clinical combinations.</p>
+                
+                {medicalInsights.length === 0 && (
+                  <div className="h-40 flex flex-col items-center justify-center gap-2 border border-slate-200 border-dashed rounded-xl bg-slate-50/50">
+                    <ShieldAlert className="w-6 h-6 text-slate-400" />
+                    <p className="text-xs font-bold text-slate-600">No High-Confidence Insights</p>
+                    <p className="text-[10px] text-slate-400 max-w-[200px]">Lower the minimum support and confidence thresholds in Settings to generate clinical rules.</p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* List of Datasets in History */}
-            <div className="bg-white rounded-xl border border-slate-200 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-slate-900">Platform Datasets</h3>
-                <NavLink to="/app/dataset-manager" className="text-xs text-blue-600 hover:underline">View all</NavLink>
-              </div>
-              
-              <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
-                {datasets.map(d => (
-                  <div key={d.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 transition-colors">
-                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                      <Database className="w-4 h-4 text-blue-500" />
+            {/* Engine Pruning Stats */}
+            {minedResults ? (
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-1">
+                  <Cpu className="w-4 h-4 text-violet-500" /> PPC Pruning Efficiency
+                </h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-xs font-medium">
+                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                      <span className="text-slate-400 block text-[10px]">Candidates Mined</span>
+                      <span className="text-base font-extrabold text-slate-800 font-mono"><AnimatedCounter value={minedResults.stats.candidatesCount} /></span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-slate-700 truncate">{d.filename}</p>
-                      <p className="text-[10px] text-slate-400">{d.rows.toLocaleString()} rows · {d.fileSize}</p>
+                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                      <span className="text-slate-400 block text-[10px]">Candidates Pruned</span>
+                      <span className="text-base font-extrabold text-slate-800 font-mono"><AnimatedCounter value={minedResults.stats.prunedCount} /></span>
                     </div>
-                    <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
-                      ready
-                    </span>
                   </div>
-                ))}
-                {datasets.length === 0 && (
-                  <p className="text-xs text-slate-400 italic">No datasets uploaded yet</p>
-                )}
+                  
+                  {/* Progress Indicator */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500 font-semibold">Tree Nodes vs Unique Items Ratio</span>
+                      <span className="font-bold text-slate-700 font-mono">
+                        {(minedResults.stats.treeNodeCount / Math.max(1, minedResults.stats.frequentItems)).toFixed(1)}x
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
+                        style={{ width: `${Math.min(100, (minedResults.stats.treeNodeCount / Math.max(1, minedResults.stats.frequentItems)) * 10)}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400">Represents the average path compression density achieved during prefix numbering.</p>
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
         </motion.div>
       )}

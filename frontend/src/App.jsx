@@ -9,6 +9,7 @@ import DiseaseAnalytics from './pages/DiseaseAnalytics'
 import MedicineAnalytics from './pages/MedicineAnalytics'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
+import PatternExplorer from './pages/PatternExplorer'
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="dataset-manager" element={<DatasetManager />} />
           <Route path="disease-analytics" element={<DiseaseAnalytics />} />
           <Route path="medicine-analytics" element={<MedicineAnalytics />} />
+          <Route path="pattern-explorer" element={<PatternExplorer />} />
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
         </Route>
